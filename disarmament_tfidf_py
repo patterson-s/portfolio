@@ -1,0 +1,128 @@
+TF_IDF from ipykernel_py2
+
+#imports
+
+
+import os
+import nltk
+import decimal
+import math
+import pickle
+
+from nltk import word_tokenize
+from nltk.corpus import stopwords
+from decimal import *
+from math import log
+
+#Stopwords
+
+os.chdir("/Users/ScottPatterson/Documents/Fall2018/Programming/python")
+
+stopwords_fri = word_tokenize(open('stopwords.en.txt').read())
+stopwords_english = stopwords.words('english')
+stopwords_spanish = stopwords.words('spanish')
+stopwords_french = stopwords.words('french')
+stopwords = stopwords_french + stopwords_english + stopwords_spanish + stopwords_fri
+
+#Overall Term Frequency Dictionary "tf_dict"
+
+
+os.chdir('/Users/ScottPatterson/Documents/Fall2018/Artificial Intelligence/data/Statements_text2/')
+path = ('/Users/ScottPatterson/Documents/Fall2018/Artificial Intelligence/data/Statements_text2/NPT_total')
+
+NPT_total = os.listdir(path)
+
+doc_index = ([s.strip('.txt') for s in (os.listdir(path))])
+
+token_filtered = []
+tf_dict = {}
+
+for x in NPT_total:
+    text = open(path + "/" + x).read().decode('utf8')
+    text = text.lower()       
+    token_list = word_tokenize(text)
+
+    for token in token_list:
+        if token not in stopwords:
+            token_filtered.append(token)
+
+for token in token_filtered:
+    if token not in tf_dict:
+        tf_dict[token] = 1
+
+    else:
+        tf_dict[token] += 1
+
+print tf_dict
+
+#Sorted View of tf_dict
+
+
+for key, value in sorted(tf_dict.iteritems(), key=lambda (k,v): (v,k)):
+    print "%s: %s" % (key,value)
+    
+#tf_idf for all documents
+
+os.chdir('/Users/ScottPatterson/Documents/Fall2018/Artificial Intelligence/data/Statements_text2/NPT_total')
+path = ('/Users/ScottPatterson/Documents/Fall2018/Artificial Intelligence/data/Statements_text2/NPT_total')
+
+doc_index = ([s.strip('.txt') for s in (os.listdir(path))])
+
+global_dict = {}
+doc_freq = {}
+tfidf_dict = {}
+
+for file_base in doc_index:
+    text = open(path + '/' + file_base + ".txt").read().decode('utf8')
+    tokens = word_tokenize(text)
+    local_dict = {}
+        
+    for token in tokens:
+        if token.lower() in stopwords:
+            local_dict[token.lower()] = 0
+
+        elif token.lower() in local_dict:
+            local_dict[token.lower()] += 1
+
+        else:
+            local_dict[token.lower()] = 1
+
+    for k,v in local_dict.items():
+        if v == 0:
+            del local_dict[k]
+
+    global_dict[file_base] = local_dict
+
+    for token in local_dict:
+        if token in doc_freq:
+            doc_freq[token] += 1
+        else:
+            doc_freq[token] = 1
+            
+for file_base in doc_index:
+    tfidf_dict[file_base] = {}
+    for token in global_dict[file_base]:
+        idf = log(1 + len(doc_index)/doc_freq[token], 10)
+        tfidf = global_dict[file_base][token] * idf
+        tfidf_dict[file_base][token] = tfidf
+
+for k,v in tfidf_dict.items():
+    print k,"-", v
+
+#Writing a pickle
+
+os.chdir("/Users/ScottPatterson/Documents/Fall2018/Artificial Intelligence/lib")
+with open('tfidf_pickle', 'wb') as handle:
+    pickle.dump(tfidf_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+#Loading a pickle
+
+os.chdir("/Users/ScottPatterson/Documents/Fall2018/Artificial Intelligence/lib")
+pickle_file = open('tfidf_pickle', "rb")
+open_pickle = pickle.load(pickle_file)
+
+print open_pickle
+
+#Return to wd
+
+os.chdir("/Users/ScottPatterson/Documents/Fall2018/Artificial Intelligence/data/Statements_text2/NPT_total")
