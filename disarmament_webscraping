@@ -1,0 +1,362 @@
+---
+title: "UNGA_scrape"
+output: html_document
+---
+
+load packages
+```{r}
+library(rvest)
+library(xml2)
+library(RCurl)
+library(XML)
+library(stringi)
+library(stringr)
+library(pdftools)
+library(Rcrawler)
+```
+
+Read html for UNGA debate page; extract CSS nodes from html; use regex to build link list for each country page 
+
+```{r}
+UNGA_2017 <- read_html("https://gadebate.un.org/en/sessions-archive")
+UNGA_2017 <- html_nodes(UNGA_2017, "#block-system-main a")
+
+UNGA_2017 <- sub("\">.*</a>", "", UNGA_2017)
+
+UNGA_2017 <- sub("<a href=\"", "https://gadebate.un.org", UNGA_2017)
+
+
+```
+
+Subset UNGA_2017 by dates
+
+```{r}
+UNGA_2017_GD_actors_09_19 <- UNGA_2017[1:35]
+UNGA_2017_GD_actors_09_20 <- UNGA_2017[36:74]
+UNGA_2017_GD_actors_09_21 <- UNGA_2017[75:115]
+UNGA_2017_GD_actors_09_22 <- UNGA_2017[116:155]
+UNGA_2017_GD_actors_09_23 <- UNGA_2017[156:187]
+UNGA_2017_GD_actors_09_25 <- UNGA_2017[188:199]
+
+```
+
+Loop through html for each subset; flatten for regex
+
+```{r}
+html_UNGA_2017_GD_actors_09_19=NULL
+html_UNGA_2017_GD_actors_09_20=NULL
+html_UNGA_2017_GD_actors_09_21=NULL
+html_UNGA_2017_GD_actors_09_22=NULL
+html_UNGA_2017_GD_actors_09_23=NULL
+html_UNGA_2017_GD_actors_09_25=NULL
+
+for (i in UNGA_2017_GD_actors_09_19){
+  a <- read_html(i)
+  b <- str_flatten(a)
+  html_UNGA_2017_GD_actors_09_19=rbind(html_UNGA_2017_GD_actors_09_19,b)
+}
+
+for (i in UNGA_2017_GD_actors_09_20){
+  a <- read_html(i)
+  b <- str_flatten(a)
+  html_UNGA_2017_GD_actors_09_20=rbind(html_UNGA_2017_GD_actors_09_20,b)
+}
+
+for (i in UNGA_2017_GD_actors_09_21){
+  a <- read_html(i)
+  b <- str_flatten(a)
+  html_UNGA_2017_GD_actors_09_21=rbind(html_UNGA_2017_GD_actors_09_21,b)
+}
+
+for (i in UNGA_2017_GD_actors_09_22){
+  a <- read_html(i)
+  b <- str_flatten(a)
+  html_UNGA_2017_GD_actors_09_22=rbind(html_UNGA_2017_GD_actors_09_22,b)
+}
+
+for (i in UNGA_2017_GD_actors_09_23){
+  a <- read_html(i)
+  b <- str_flatten(a)
+  html_UNGA_2017_GD_actors_09_23=rbind(html_UNGA_2017_GD_actors_09_23,b)
+}
+
+for (i in UNGA_2017_GD_actors_09_25){
+  a <- read_html(i)
+  b <- str_flatten(a)
+  html_UNGA_2017_GD_actors_09_25=rbind(html_UNGA_2017_GD_actors_09_25,b)
+}
+
+rm(a,b,i)
+```
+
+extract links with regex; unlist links 
+
+```{r}
+
+reg_pattern <- "https://gadebate.un.org/sites/default/files/gastatements/72/.*?\\.pdf"
+
+m <- gregexpr(reg_pattern, html_UNGA_2017_GD_actors_09_19)
+links_UNGA_2017_GD_actors_09_19 <- regmatches(html_UNGA_2017_GD_actors_09_19,m)
+links_UNGA_2017_GD_actors_09_19<- unlist(reg_links)
+
+m <- gregexpr(reg_pattern, html_UNGA_2017_GD_actors_09_20)
+links_UNGA_2017_GD_actors_09_20 <- regmatches(html_UNGA_2017_GD_actors_09_20,m)
+links_UNGA_2017_GD_actors_09_20<- unlist(reg_links)
+
+m <- gregexpr(reg_pattern, html_UNGA_2017_GD_actors_09_21)
+links_UNGA_2017_GD_actors_09_21 <- regmatches(html_UNGA_2017_GD_actors_09_21,m)
+links_UNGA_2017_GD_actors_09_21<- unlist(reg_links)
+
+m <- gregexpr(reg_pattern, html_UNGA_2017_GD_actors_09_22)
+links_UNGA_2017_GD_actors_09_22 <- regmatches(html_UNGA_2017_GD_actors_09_22,m)
+links_UNGA_2017_GD_actors_09_22<- unlist(reg_links)
+
+m <- gregexpr(reg_pattern, html_UNGA_2017_GD_actors_09_23)
+links_UNGA_2017_GD_actors_09_23 <- regmatches(html_UNGA_2017_GD_actors_09_23,m)
+links_UNGA_2017_GD_actors_09_23<- unlist(reg_links)
+
+m <- gregexpr(reg_pattern, html_UNGA_2017_GD_actors_09_25)
+links_UNGA_2017_GD_actors_09_25 <- regmatches(html_UNGA_2017_GD_actors_09_25,m)
+links_UNGA_2017_GD_actors_09_25<- unlist(reg_links)
+
+rm(m, reg_pattern)
+
+```
+
+save .pdf files to directory 
+
+```{r}
+
+#09_19
+dest_files_09_19 <- paste0("./", links_UNGA_2017_GD_actors_09_19)
+dest_files_09_19 <- sub("https://gadebate.un.org/sites/default/files/gastatements/72/","UNGA_2017_GD_",dest_files_09_19)
+dest_files_09_19 <- sub("\\.pdf","_09_19",dest_files_09_19)
+
+
+for (i in seq_along(links_UNGA_2017_GD_actors_09_19)){
+  download.file(links_UNGA_2017_GD_actors_09_19[i] , dest_files_09_19[i])
+}
+
+#09_20
+
+dest_files_09_20 <- paste0("./", links_UNGA_2017_GD_actors_09_20)
+dest_files_09_20 <- sub("https://gadebate.un.org/sites/default/files/gastatements/72/","UNGA_2017_GD_",dest_files_09_20)
+dest_files_09_20 <- sub("\\.pdf","_09_20",dest_files_09_20)
+
+
+for (i in seq_along(links_UNGA_2017_GD_actors_09_20)){
+  download.file(links_UNGA_2017_GD_actors_09_20[i] , dest_files_09_20[i])
+}
+
+#09_21
+dest_files_09_21 <- paste0("./", links_UNGA_2017_GD_actors_09_21)
+dest_files_09_21 <- sub("https://gadebate.un.org/sites/default/files/gastatements/72/","UNGA_2017_GD_",dest_files_09_21)
+dest_files_09_21 <- sub("\\.pdf","_09_21",dest_files_09_21)
+
+
+for (i in seq_along(links_UNGA_2017_GD_actors_09_21)){
+  download.file(links_UNGA_2017_GD_actors_09_21[i] , dest_files_09_21[i])
+}
+
+#09_22
+dest_files_09_22 <- paste0("./", links_UNGA_2017_GD_actors_09_22)
+dest_files_09_22 <- sub("https://gadebate.un.org/sites/default/files/gastatements/72/","UNGA_2017_GD_",dest_files_09_22)
+dest_files_09_22 <- sub("\\.pdf","_09_22",dest_files_09_22)
+
+
+for (i in seq_along(links_UNGA_2017_GD_actors_09_22)){
+  download.file(links_UNGA_2017_GD_actors_09_22[i] , dest_files_09_22[i])
+}
+
+#09_23
+dest_files_09_23 <- paste0("./", links_UNGA_2017_GD_actors_09_23)
+dest_files_09_23 <- sub("https://gadebate.un.org/sites/default/files/gastatements/72/","UNGA_2017_GD_",dest_files_09_23)
+dest_files_09_23 <- sub("\\.pdf","_09_23",dest_files_09_23)
+
+
+for (i in seq_along(links_UNGA_2017_GD_actors_09_23)){
+  download.file(links_UNGA_2017_GD_actors_09_23[i] , dest_files_09_23[i])
+}
+
+#09_25
+dest_files_09_25 <- paste0("./", links_UNGA_2017_GD_actors_09_25)
+dest_files_09_25 <- sub("https://gadebate.un.org/sites/default/files/gastatements/72/","UNGA_2017_GD_",dest_files_09_25)
+dest_files_09_25 <- sub("\\.pdf","_09_25",dest_files_09_25)
+
+
+for (i in seq_along(links_UNGA_2017_GD_actors_09_25)){
+  download.file(links_UNGA_2017_GD_actors_09_25[i] , dest_files_09_25[i])
+}
+
+
+```
+
+Read html for UNGA_2016 GA debate
+
+```{r}
+UNGA_2016 <- read_html("https://gadebate.un.org/en/sessions-archive/71")
+UNGA_2016 <- html_nodes(UNGA_2016, "#block-system-main a")
+
+UNGA_2016 <- sub("\">.*</a>", "", UNGA_2016)
+
+UNGA_2016 <- sub("<a href=\"", "https://gadebate.un.org", UNGA_2016)
+```
+
+Subset UNGA_2016 by dates
+
+```{r}
+UNGA_2016_GD_actors_09_20 <- UNGA_2016[1:36]
+UNGA_2016_GD_actors_09_21 <- UNGA_2016[37:74]
+UNGA_2016_GD_actors_09_22 <- UNGA_2016[75:112]
+UNGA_2016_GD_actors_09_23 <- UNGA_2016[113:150]
+UNGA_2016_GD_actors_09_24 <- UNGA_2016[151:180]
+UNGA_2016_GD_actors_09_26 <- UNGA_2016[181:197]
+
+```
+
+loop through html for each subset; flatten for regex
+
+```{r}
+html_UNGA_2016_GD_actors_09_20=NULL
+html_UNGA_2016_GD_actors_09_21=NULL
+html_UNGA_2016_GD_actors_09_22=NULL
+html_UNGA_2016_GD_actors_09_23=NULL
+html_UNGA_2016_GD_actors_09_24=NULL
+html_UNGA_2016_GD_actors_09_26=NULL
+
+for (i in UNGA_2016_GD_actors_09_20){
+  a <- read_html(i)
+  b <- str_flatten(a)
+  html_UNGA_2016_GD_actors_09_20=rbind(html_UNGA_2016_GD_actors_09_20,b)
+}
+
+for (i in UNGA_2016_GD_actors_09_21){
+  a <- read_html(i)
+  b <- str_flatten(a)
+  html_UNGA_2016_GD_actors_09_21=rbind(html_UNGA_2016_GD_actors_09_21,b)
+}
+
+for (i in UNGA_2016_GD_actors_09_22){
+  a <- read_html(i)
+  b <- str_flatten(a)
+  html_UNGA_2016_GD_actors_09_22=rbind(html_UNGA_2016_GD_actors_09_22,b)
+}
+
+for (i in UNGA_2016_GD_actors_09_23){
+  a <- read_html(i)
+  b <- str_flatten(a)
+  html_UNGA_2016_GD_actors_09_23=rbind(html_UNGA_2016_GD_actors_09_23,b)
+}
+
+for (i in UNGA_2016_GD_actors_09_24){
+  a <- read_html(i)
+  b <- str_flatten(a)
+  html_UNGA_2016_GD_actors_09_24=rbind(html_UNGA_2016_GD_actors_09_24,b)
+}
+
+for (i in UNGA_2016_GD_actors_09_26){
+  a <- read_html(i)
+  b <- str_flatten(a)
+  html_UNGA_2016_GD_actors_09_26=rbind(html_UNGA_2016_GD_actors_09_26,b)
+}
+
+rm(a,b,i)
+```
+
+extract links with regex; unlist links 
+
+```{r}
+reg_pattern <- "https://gadebate.un.org/sites/default/files/gastatements/71/.*?\\.pdf"
+
+m <- gregexpr(reg_pattern, html_UNGA_2016_GD_actors_09_20)
+links_UNGA_2016_GD_actors_09_20 <- regmatches(html_UNGA_2016_GD_actors_09_20,m)
+links_UNGA_2016_GD_actors_09_20<- unlist(links_UNGA_2016_GD_actors_09_20)
+
+m <- gregexpr(reg_pattern, html_UNGA_2016_GD_actors_09_21)
+links_UNGA_2016_GD_actors_09_21 <- regmatches(html_UNGA_2016_GD_actors_09_21,m)
+links_UNGA_2016_GD_actors_09_21<- unlist(links_UNGA_2016_GD_actors_09_21)
+
+m <- gregexpr(reg_pattern, html_UNGA_2016_GD_actors_09_22)
+links_UNGA_2016_GD_actors_09_22 <- regmatches(html_UNGA_2016_GD_actors_09_22,m)
+links_UNGA_2016_GD_actors_09_22<- unlist(links_UNGA_2016_GD_actors_09_22)
+
+m <- gregexpr(reg_pattern, html_UNGA_2016_GD_actors_09_23)
+links_UNGA_2016_GD_actors_09_23 <- regmatches(html_UNGA_2016_GD_actors_09_23,m)
+links_UNGA_2016_GD_actors_09_23<- unlist(links_UNGA_2016_GD_actors_09_23)
+
+m <- gregexpr(reg_pattern, html_UNGA_2016_GD_actors_09_24)
+links_UNGA_2016_GD_actors_09_24 <- regmatches(html_UNGA_2016_GD_actors_09_24,m)
+links_UNGA_2016_GD_actors_09_24<- unlist(links_UNGA_2016_GD_actors_09_24)
+
+m <- gregexpr(reg_pattern, html_UNGA_2016_GD_actors_09_26)
+links_UNGA_2016_GD_actors_09_26 <- regmatches(html_UNGA_2016_GD_actors_09_26,m)
+links_UNGA_2016_GD_actors_09_26<- unlist(links_UNGA_2016_GD_actors_09_26)
+
+rm(m, reg_pattern)
+```
+
+save .pdf files to directory 
+
+```{r}
+#09_20
+dest_files_09_20 <- paste0("./", links_UNGA_2016_GD_actors_09_20)
+dest_files_09_20 <- sub("https://gadebate.un.org/sites/default/files/gastatements/71/","UNGA_2016_GD_",dest_files_09_20)
+dest_files_09_20 <- sub("\\.pdf","_09_20",dest_files_09_20)
+
+
+for (i in seq_along(links_UNGA_2016_GD_actors_09_20)){
+  download.file(links_UNGA_2016_GD_actors_09_20[i] , dest_files_09_20[i])
+}
+
+#09_21
+
+dest_files_09_21 <- paste0("./", links_UNGA_2016_GD_actors_09_21)
+dest_files_09_21 <- sub("https://gadebate.un.org/sites/default/files/gastatements/71/","UNGA_2016_GD_",dest_files_09_21)
+dest_files_09_21 <- sub("\\.pdf","_09_21",dest_files_09_21)
+
+
+for (i in seq_along(links_UNGA_2016_GD_actors_09_21)){
+  download.file(links_UNGA_2016_GD_actors_09_21[i] , dest_files_09_21[i])
+}
+
+#09_22
+dest_files_09_22 <- paste0("./", links_UNGA_2016_GD_actors_09_22)
+dest_files_09_22 <- sub("https://gadebate.un.org/sites/default/files/gastatements/71/","UNGA_2016_GD_",dest_files_09_22)
+dest_files_09_22 <- sub("\\.pdf","_09_22",dest_files_09_22)
+
+
+for (i in seq_along(links_UNGA_2016_GD_actors_09_22)){
+  download.file(links_UNGA_2016_GD_actors_09_22[i] , dest_files_09_22[i])
+}
+
+#09_23
+dest_files_09_23 <- paste0("./", links_UNGA_2016_GD_actors_09_23)
+dest_files_09_23 <- sub("https://gadebate.un.org/sites/default/files/gastatements/71/","UNGA_2016_GD_",dest_files_09_23)
+dest_files_09_23 <- sub("\\.pdf","_09_23",dest_files_09_23)
+
+
+for (i in seq_along(links_UNGA_2016_GD_actors_09_23)){
+  download.file(links_UNGA_2016_GD_actors_09_23[i] , dest_files_09_23[i])
+}
+
+#09_24
+dest_files_09_24 <- paste0("./", links_UNGA_2016_GD_actors_09_24)
+dest_files_09_24 <- sub("https://gadebate.un.org/sites/default/files/gastatements/71/","UNGA_2016_GD_",dest_files_09_24)
+dest_files_09_24 <- sub("\\.pdf","_09_24",dest_files_09_24)
+
+
+for (i in seq_along(links_UNGA_2016_GD_actors_09_24)){
+  download.file(links_UNGA_2016_GD_actors_09_24[i] , dest_files_09_24[i])
+}
+
+#09_26
+dest_files_09_26 <- paste0("./", links_UNGA_2016_GD_actors_09_26)
+dest_files_09_26 <- sub("https://gadebate.un.org/sites/default/files/gastatements/71/","UNGA_2016_GD_",dest_files_09_26)
+dest_files_09_26 <- sub("\\.pdf","_09_26",dest_files_09_26)
+
+
+for (i in seq_along(links_UNGA_2016_GD_actors_09_26)){
+  download.file(links_UNGA_2016_GD_actors_09_26[i] , dest_files_09_26[i])
+}
+```
+
